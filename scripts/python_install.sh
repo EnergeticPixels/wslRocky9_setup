@@ -39,6 +39,21 @@ run_pkg_manager() {
 	exit 1
 }
 
+python_pkg_exists() {
+	local pkg
+	pkg="$1"
+
+	if run_pkg_manager -q list --installed "$pkg" >/dev/null 2>&1; then
+		return 0
+	fi
+
+	if run_pkg_manager -q list --available "$pkg" >/dev/null 2>&1; then
+		return 0
+	fi
+
+	return 1
+}
+
 is_wsl() {
 	grep -qiE "microsoft|wsl" /proc/version 2>/dev/null
 }
@@ -58,6 +73,7 @@ maybe_mask_binfmt_on_wsl() {
 main() {
 	local python_pkg python_pip_pkg python_dev_pkg python_cmd
 	local pkg_phase_complete reexec_as_user target_user
+	local target_py_mm existing_py_mm
 
 	load_python_env
 	validate_python_dev_mode
@@ -67,12 +83,35 @@ main() {
 	python_dev_pkg="python3-devel"
 	python_cmd="python3"
 
-	# Reflex requires a newer interpreter than Rocky's default python3 (3.6).
+	# Reflex mode benefits from newer Python and complex dependency resolution.
+	# Prefer Python 3.11 on Rocky 9 when available, then fall back to 3.9 naming variants.
 	if [[ "$PYTHON_DEV_MODE" == "reflex" || "$PYTHON_DEV_MODE" == "both" ]]; then
-		python_pkg="python39"
-		python_pip_pkg="python39-pip"
-		python_dev_pkg="python39-devel"
-		python_cmd="python3.9"
+		if python_pkg_exists "python3.11" && python_pkg_exists "python3.11-pip" && python_pkg_exists "python3.11-devel"; then
+			python_pkg="python3.11"
+			python_pip_pkg="python3.11-pip"
+			python_dev_pkg="python3.11-devel"
+			python_cmd="python3.11"
+		else
+			if python_pkg_exists "python3.9"; then
+				python_pkg="python3.9"
+			fi
+
+			if python_pkg_exists "python3.9-pip"; then
+				python_pip_pkg="python3.9-pip"
+			elif python_pkg_exists "python39-pip"; then
+				python_pip_pkg="python39-pip"
+			fi
+
+			if python_pkg_exists "python3.9-devel"; then
+				python_dev_pkg="python3.9-devel"
+			elif python_pkg_exists "python39-devel"; then
+				python_dev_pkg="python39-devel"
+			fi
+
+			if command -v python3.9 >/dev/null 2>&1; then
+				python_cmd="python3.9"
+			fi
+		fi
 	fi
 
 	export PYTHON_CMD="$python_cmd"
@@ -87,6 +126,8 @@ main() {
 	log "Base Python: ENABLED"
 	log "Data Science Stack: $PYTHON_DATA_SCIENCE_STACK_ENABLE"
 	log "Dev Mode: $PYTHON_DEV_MODE"
+	log "Resolved Python packages: $python_pkg $python_pip_pkg $python_dev_pkg"
+	log "Resolved Python command: $python_cmd"
 	PYTHON_VENV_PATH="${PYTHON_VENV_PATH:-$HOME/.venvs/initprov-python}"
 	pkg_phase_complete="${PYTHON_PKG_PHASE_COMPLETE:-0}"
 	reexec_as_user="${PYTHON_REEXEC_AS_USER:-0}"
@@ -128,6 +169,15 @@ main() {
 	fi
 
 	# Use an isolated virtual environment to keep Python tooling isolated.
+	target_py_mm="$("$python_cmd" -c 'import sys; print(f"{sys.version_info[0]}.{sys.version_info[1]}")')"
+	if [[ -x "$PYTHON_VENV_PATH/bin/python" ]]; then
+		existing_py_mm="$("$PYTHON_VENV_PATH/bin/python" -c 'import sys; print(f"{sys.version_info[0]}.{sys.version_info[1]}")' 2>/dev/null || true)"
+		if [[ -n "$existing_py_mm" && "$existing_py_mm" != "$target_py_mm" ]]; then
+			log "Existing virtualenv uses Python $existing_py_mm but target is $target_py_mm. Recreating virtualenv."
+			rm -rf "$PYTHON_VENV_PATH"
+		fi
+	fi
+
 	if [[ ! -d "$PYTHON_VENV_PATH" ]]; then
 		log "Creating Python virtual environment at $PYTHON_VENV_PATH"
 		mkdir -p "$(dirname "$PYTHON_VENV_PATH")"

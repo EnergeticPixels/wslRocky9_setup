@@ -698,36 +698,29 @@ wizard() {
 }
 
 wizard_command() {
-	local proceed preflight_done
+	local proceed
 	require_supported_platform
-	preflight_done=false
 
-	while true; do
-		wizard
-		echo ""
-		plan_command
+	wizard
+	echo ""
+	plan_command
 
-		if [[ "$preflight_done" != "true" ]]; then
-			echo ""
-			wizard_preflight_before_run_prompt
-			preflight_done=true
+	echo ""
+	wizard_preflight_before_run_prompt
+
+	echo ""
+	proceed="$(read_bool 'Proceed with provisioning?' 'true')"
+
+	if [[ "$proceed" == "true" ]]; then
+		if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
+			run_command
+		else
+			sudo bash "$ROOT_DIR/provisioning.sh" run
 		fi
+		return 0
+	fi
 
-		echo ""
-		proceed="$(read_bool 'Proceed with provisioning?' 'true')"
-
-		if [[ "$proceed" == "true" ]]; then
-			if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
-				run_command
-			else
-				sudo bash "$ROOT_DIR/provisioning.sh" run
-			fi
-			return 0
-		fi
-
-		log "Plan rejected. Restarting wizard."
-		echo ""
-	done
+	log "Provisioning canceled by user."
 }
 
 validate_node_env() {
@@ -1211,7 +1204,7 @@ run_command() {
 	done
 
 	require_root
-	sp_require_rocky8
+	sp_require_rocky9
 
 	if [[ "$dry_run" == "true" ]]; then
 		log "Dry run enabled."
