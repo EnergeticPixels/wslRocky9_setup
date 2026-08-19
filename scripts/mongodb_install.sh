@@ -25,7 +25,7 @@ PLATFORM_LIB="$SCRIPT_DIR/lib/platform.sh"
 if [[ -f "$PLATFORM_LIB" ]]; then
 	# shellcheck source=/dev/null
 	source "$PLATFORM_LIB"
-	sp_require_rocky8
+	sp_require_rocky9
 fi
 
 service_start() {
@@ -85,7 +85,7 @@ configure_mongodb_yum_repo() {
 	cat > "$repo_file" <<EOF
 [mongodb-org-${MONGODB_VERSION}]
 name=MongoDB Repository
-baseurl=https://repo.mongodb.org/yum/redhat/8/mongodb-org/${MONGODB_VERSION}/x86_64/
+	baseurl=https://repo.mongodb.org/yum/redhat/9/mongodb-org/${MONGODB_VERSION}/x86_64/
 gpgcheck=1
 enabled=1
 gpgkey=https://pgp.mongodb.com/server-${MONGODB_VERSION}.asc

@@ -369,7 +369,7 @@ ensure_remi_php_repo() {
 	fi
 
 	if ! rpm -q remi-release >/dev/null 2>&1; then
-		dnf install -y "https://rpms.remirepo.net/enterprise/remi-release-8.rpm"
+		dnf install -y "https://rpms.remirepo.net/enterprise/remi-release-9.rpm"
 	fi
 
 	dnf install -y dnf-plugins-core

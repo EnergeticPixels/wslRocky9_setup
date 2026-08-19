@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Shared package manager abstraction for Rocky 8 orchestrator flows.
+# Shared package manager abstraction for Rocky 9 orchestrator flows.
 
 if [[ -z "${SP_OS_ID:-}" ]]; then
 	# shellcheck disable=SC1091

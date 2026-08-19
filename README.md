@@ -1,15 +1,15 @@
 # WSL Rocky Provisioning Kit
 
-Opinionated provisioning scripts for Windows 11 + WSL2 (Rocky Linux 8) focused on app development and Moodle testing.
+Opinionated provisioning scripts for Windows 11 + WSL2 (Rocky Linux 9) focused on app development and Moodle testing.
 
 ## Support Contract
 
 Current target scope:
-- Rocky Linux 8 on WSL2
+- Rocky Linux 9 on WSL2
 - Windows 11 host
 - Rooted provisioning via `sudo bash ./provisioning.sh run`
 
-This project no longer treats Debian as a primary onboarding target.
+This project supports Rocky Linux 9 onboarding only.
 
 ## Quickstart
 
@@ -31,7 +31,7 @@ bash ./provisioning.sh wizard
 
 The wizard saves `.env`, displays the provisioning plan, and starts the run after confirmation.
 
-### Fresh clone quick start (Rocky 8 WSL)
+### Fresh clone quick start (Rocky 9 WSL)
 
 If you cloned the repo directly (recommended), run:
 
@@ -153,7 +153,7 @@ Keys are managed automatically during each `provisioning.sh run`:
 - [05 - Databases (MariaDB, PostgreSQL, MongoDB)](docs/05-DATABASES.md)
 - [06 - Cache Store (Redis)](docs/06-CACHE-STORE.md)
 - [07 - WSL Notes and Service Behavior](docs/07-WSL-NOTES.md)
-- [08 - Rocky 8 Compatibility Contract](docs/08-ROCKY-COMPATIBILITY-CONTRACT.md)
+- [08 - Rocky 9 Compatibility Contract](docs/08-ROCKY-COMPATIBILITY-CONTRACT.md)
 - [Config Reference (.env variables)](docs/CONFIG-REFERENCE.md)
 
 ## Script Entry Points

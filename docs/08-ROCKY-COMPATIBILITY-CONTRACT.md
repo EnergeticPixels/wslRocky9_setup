@@ -1,4 +1,4 @@
-# Rocky 8 Compatibility Contract
+# Rocky 9 Compatibility Contract
 
 This document defines the Phase 1 compatibility contract for this repository.
 
@@ -7,10 +7,10 @@ This document defines the Phase 1 compatibility contract for this repository.
 Supported target:
 - Windows 11 host
 - WSL2 guest
-- Rocky Linux 8
+- Rocky Linux 9
 
 Out of scope for this contract:
-- Debian-first onboarding behavior
+- Non-Rocky onboarding behavior
 - Non-Rocky RPM distributions unless explicitly added later
 
 ## Platform Contract
@@ -46,7 +46,7 @@ Out of scope for this contract:
 
 ## Onboarding Contract
 
-All onboarding commands and target language in [README.md](../README.md), [docs/00-QUICKSTART.md](00-QUICKSTART.md), and [docs/01-SETUP.md](01-SETUP.md) must be Rocky 8-first.
+All onboarding commands and target language in [README.md](../README.md), [docs/00-QUICKSTART.md](00-QUICKSTART.md), and [docs/01-SETUP.md](01-SETUP.md) must be Rocky 9-first.
 
 ## Migration Note
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Phase 1 contract target: Rocky Linux 8 on WSL2.
+# Phase 1 contract target: Rocky Linux 9 on WSL2.
 
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 ENV_SAMPLE_PATH="$ROOT_DIR/.env.sample"
@@ -87,7 +87,7 @@ normalize_env_file_permissions() {
 }
 
 require_supported_platform() {
-	sp_require_rocky8 || exit 1
+	sp_require_rocky9 || exit 1
 }
 
 ensure_wizard_prerequisites() {
@@ -1130,7 +1130,7 @@ run_only_component() {
 run_full_provisioning() {
 	local keys_changed_flag
 
-	sp_require_rocky8
+	sp_require_rocky9
 	setup_logging
 
 	log "Starting Rocky provisioning on $SP_OS_NAME"

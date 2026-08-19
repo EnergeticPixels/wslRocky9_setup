@@ -25,7 +25,7 @@ PLATFORM_LIB="$SCRIPT_DIR/lib/platform.sh"
 if [[ -f "$PLATFORM_LIB" ]]; then
 	# shellcheck source=/dev/null
 	source "$PLATFORM_LIB"
-	sp_require_rocky8
+	sp_require_rocky9
 fi
 
 POSTGRES_SERVICE_NAME="postgresql"
@@ -58,7 +58,7 @@ configure_postgresql_repo_if_needed() {
 	fi
 
 	log "Installing PGDG repository for versioned PostgreSQL packages."
-	dnf install -y "https://download.postgresql.org/pub/repos/yum/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm"
+	dnf install -y "https://download.postgresql.org/pub/repos/yum/reporpms/EL-9-x86_64/pgdg-redhat-repo-latest.noarch.rpm"
 	dnf -qy module disable postgresql || true
 }
 

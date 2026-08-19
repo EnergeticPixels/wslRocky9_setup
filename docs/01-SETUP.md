@@ -5,7 +5,7 @@
 This repository is designed for:
 - Windows 11 host
 - WSL2 guest
-- Rocky Linux 8
+- Rocky Linux 9
 
 ## Base preparation
 
@@ -34,7 +34,7 @@ The selected `WEB_SSL_BASE_DOMAIN` is used by both Apache and Nginx SSL provisio
 
 Recommended mapping targets:
 - `127.0.0.1` (localhost routing)
-- Rocky 8 WSL2 guest IP (direct guest routing)
+- Rocky 9 WSL2 guest IP (direct guest routing)
 
 Use only the mapping that matches your setup.
 

@@ -126,7 +126,7 @@ systemctl status mongod
 ```
 
 Behavior highlights:
-- Uses official MongoDB EL8 yum repository
+- Uses official MongoDB EL9 yum repository
 - Repository configuration is written under `/etc/yum.repos.d/`
 - Starts services using `systemctl` or `service` fallback
 

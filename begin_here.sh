@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Phase 1 contract target: Rocky Linux 8 on WSL2.
+# Phase 1 contract target: Rocky Linux 9 on WSL2.
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPTS_DIR="$SCRIPT_DIR/scripts"
@@ -178,7 +178,7 @@ show_public_keys() {
 
 main() {
 	require_root
-	sp_require_rocky8
+	sp_require_rocky9
 	setup_logging
 
 	log "Starting Rocky provisioning on $SP_OS_NAME"

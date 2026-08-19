@@ -25,7 +25,7 @@ PLATFORM_LIB="$SCRIPT_DIR/lib/platform.sh"
 if [[ -f "$PLATFORM_LIB" ]]; then
 	# shellcheck source=/dev/null
 	source "$PLATFORM_LIB"
-	sp_require_rocky8
+	sp_require_rocky9
 fi
 
 install_redis_packages() {

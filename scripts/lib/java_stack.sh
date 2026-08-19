@@ -135,11 +135,11 @@ ensure_adoptium_repo() {
 	repo_file="/etc/yum.repos.d/adoptium.repo"
 
 	if [[ ! -f "$repo_file" ]] || ! grep -q "packages.adoptium.net" "$repo_file"; then
-		log "Adding Adoptium repository for Rocky 8."
+		log "Adding Adoptium repository for Rocky 9."
 		cat > "$repo_file" <<'EOF'
 [Adoptium]
 name=Adoptium
-baseurl=https://packages.adoptium.net/artifactory/rpm/centos/8/$basearch
+baseurl=https://packages.adoptium.net/artifactory/rpm/centos/9/$basearch
 enabled=1
 gpgcheck=1
 gpgkey=https://packages.adoptium.net/artifactory/api/gpg/key/public
