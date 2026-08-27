@@ -419,6 +419,19 @@ read_bool() {
 	default="$2"
 	normalized_default="$(printf '%s' "$default" | tr '[:upper:]' '[:lower:]')"
 
+	case "$normalized_default" in
+		1|true|yes|y|on)
+			normalized_default="true"
+			;;
+		0|false|no|n|off)
+			normalized_default="false"
+			;;
+		*)
+			echo "Invalid boolean default '$default' for prompt '$prompt'. Falling back to false." >&2
+			normalized_default="false"
+			;;
+	esac
+
 	while true; do
 		read -r -p "$prompt [$normalized_default]: " input
 		input="${input:-$normalized_default}"
@@ -434,7 +447,7 @@ read_bool() {
 				return 0
 				;;
 			*)
-				echo "Please enter true/false (or yes/no)."
+				echo "Please enter true/false (or yes/no)." >&2
 				;;
 		esac
 	done
@@ -446,7 +459,21 @@ read_choice() {
 	prompt="$1"
 	default="$2"
 	allowed_csv="$3"
-	normalized="$(printf '%s' "$default" | tr '[:upper:]' '[:lower:]')"
+	default="$(printf '%s' "$default" | tr '[:upper:]' '[:lower:]')"
+
+	IFS=',' read -r -a allowed_tokens <<< "$allowed_csv"
+	found=0
+	for allowed_token in "${allowed_tokens[@]}"; do
+		if [[ "$default" == "$allowed_token" ]]; then
+			found=1
+			break
+		fi
+	done
+
+	if [[ "$found" -ne 1 ]]; then
+		echo "Invalid default '$default' for prompt '$prompt'. Falling back to '${allowed_tokens[0]}'." >&2
+		default="${allowed_tokens[0]}"
+	fi
 
 	while true; do
 		read -r -p "$prompt [$default]: " input
@@ -454,7 +481,6 @@ read_choice() {
 		normalized="$(printf '%s' "$input" | tr '[:upper:]' '[:lower:]')"
 		found=0
 
-		IFS=',' read -r -a allowed_tokens <<< "$allowed_csv"
 		for allowed_token in "${allowed_tokens[@]}"; do
 			if [[ "$normalized" == "$allowed_token" ]]; then
 				found=1
@@ -467,7 +493,7 @@ read_choice() {
 			return 0
 		fi
 
-		echo "Invalid value. Allowed: $allowed_csv"
+		echo "Invalid value. Allowed: $allowed_csv" >&2
 	done
 }
 

@@ -52,14 +52,69 @@ nginx_ssl_mkcert_domains_array() {
 	printf '%s\n%s\n' "$base" "*.$base"
 }
 
-nginx_ssl_install_mkcert_if_needed() {
+nginx_ssl_resolve_mkcert_binary() {
 	if command -v mkcert >/dev/null 2>&1; then
+		command -v mkcert
+		return 0
+	fi
+
+	if [[ -x /usr/local/bin/mkcert ]]; then
+		echo "/usr/local/bin/mkcert"
+		return 0
+	fi
+
+	if [[ -x /usr/bin/mkcert ]]; then
+		echo "/usr/bin/mkcert"
+		return 0
+	fi
+
+	return 1
+}
+
+nginx_ssl_install_mkcert_binary_fallback() {
+	local arch download_url tmp_dir
+
+	case "$(uname -m)" in
+		x86_64) arch="amd64" ;;
+		aarch64|arm64) arch="arm64" ;;
+		*)
+			echo "Unsupported architecture for mkcert fallback install: $(uname -m)" >&2
+			return 1
+			;;
+	esac
+
+	download_url="https://dl.filippo.io/mkcert/latest?for=linux/${arch}"
+	tmp_dir="$(mktemp -d)"
+
+	if ! curl -fsSL "$download_url" -o "$tmp_dir/mkcert"; then
+		rm -rf "$tmp_dir"
+		echo "Failed to download mkcert binary from $download_url" >&2
+		return 1
+	fi
+
+	install -m 0755 "$tmp_dir/mkcert" /usr/local/bin/mkcert
+	ln -sfn /usr/local/bin/mkcert /usr/bin/mkcert
+	rm -rf "$tmp_dir"
+}
+
+nginx_ssl_install_mkcert_if_needed() {
+	if nginx_ssl_resolve_mkcert_binary >/dev/null 2>&1; then
 		return 0
 	fi
 
 	log "Installing mkcert for local development certificates."
-	dnf install -y epel-release
-	dnf install -y mkcert
+	dnf install -y epel-release || true
+	dnf install -y nss-tools || true
+
+	if ! dnf install -y mkcert; then
+		log "mkcert package not available via current repositories; using direct binary fallback."
+		nginx_ssl_install_mkcert_binary_fallback
+	fi
+
+	if ! nginx_ssl_resolve_mkcert_binary >/dev/null 2>&1; then
+		echo "mkcert installation failed. Install mkcert manually and re-run provisioning." >&2
+		exit 1
+	fi
 }
 
 nginx_ssl_backup_existing_artifacts() {
@@ -127,7 +182,7 @@ nginx_ssl_should_regenerate() {
 }
 
 nginx_ssl_generate_certificate() {
-	local base_domain
+	local base_domain mkcert_bin
 	local -a mkcert_domains
 	base_domain="$(normalize_domain_local "$1")"
 
@@ -137,13 +192,18 @@ nginx_ssl_generate_certificate() {
 	fi
 
 	mkdir -p "$NGINX_SSL_DIR"
+	mkcert_bin="$(nginx_ssl_resolve_mkcert_binary || true)"
+	if [[ -z "$mkcert_bin" ]]; then
+		echo "mkcert binary is unavailable after installation attempt." >&2
+		exit 1
+	fi
 
 	if nginx_ssl_should_regenerate "$base_domain"; then
 		log "Generating mkcert certificate for $base_domain and *.$base_domain"
 		nginx_ssl_backup_existing_artifacts
 		mapfile -t mkcert_domains < <(nginx_ssl_mkcert_domains_array "$base_domain")
-		mkcert -install
-		mkcert -cert-file "$NGINX_SSL_CERT_FILE" -key-file "$NGINX_SSL_KEY_FILE" "${mkcert_domains[@]}"
+		"$mkcert_bin" -install
+		"$mkcert_bin" -cert-file "$NGINX_SSL_CERT_FILE" -key-file "$NGINX_SSL_KEY_FILE" "${mkcert_domains[@]}"
 		chmod 640 "$NGINX_SSL_CERT_FILE" "$NGINX_SSL_KEY_FILE"
 		chown root:nginx "$NGINX_SSL_CERT_FILE" "$NGINX_SSL_KEY_FILE"
 		nginx_ssl_domains_san_string "$base_domain" > "$NGINX_SSL_DOMAINS_FILE"
@@ -186,9 +246,8 @@ server {
 }
 
 server {
-	listen 443 ssl;
-	listen [::]:443 ssl;
-	http2 on;
+	listen 443 ssl http2;
+	listen [::]:443 ssl http2;
 	server_name $base_domain *.$base_domain;
 
 	root /var/www/html;
@@ -222,9 +281,8 @@ server {
 }
 
 server {
-	listen 443 ssl;
-	listen [::]:443 ssl;
-	http2 on;
+	listen 443 ssl http2;
+	listen [::]:443 ssl http2;
 	server_name $base_domain *.$base_domain;
 
 	root /var/www/html;
@@ -253,9 +311,8 @@ server {
 }
 
 server {
-	listen 443 ssl;
-	listen [::]:443 ssl;
-	http2 on;
+	listen 443 ssl http2;
+	listen [::]:443 ssl http2;
 	server_name $base_domain *.$base_domain;
 
 	root /var/www/html;
@@ -285,9 +342,8 @@ server {
 }
 
 server {
-	listen 443 ssl;
-	listen [::]:443 ssl;
-	http2 on;
+	listen 443 ssl http2;
+	listen [::]:443 ssl http2;
 	server_name $base_domain *.$base_domain;
 
 	root /var/www/html;

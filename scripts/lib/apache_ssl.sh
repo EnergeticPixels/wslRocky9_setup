@@ -52,14 +52,69 @@ apache_ssl_mkcert_domains_array() {
 	printf '%s\n%s\n' "$base" "*.$base"
 }
 
-apache_ssl_install_mkcert_if_needed() {
+apache_ssl_resolve_mkcert_binary() {
 	if command -v mkcert >/dev/null 2>&1; then
+		command -v mkcert
+		return 0
+	fi
+
+	if [[ -x /usr/local/bin/mkcert ]]; then
+		echo "/usr/local/bin/mkcert"
+		return 0
+	fi
+
+	if [[ -x /usr/bin/mkcert ]]; then
+		echo "/usr/bin/mkcert"
+		return 0
+	fi
+
+	return 1
+}
+
+apache_ssl_install_mkcert_binary_fallback() {
+	local arch download_url tmp_dir
+
+	case "$(uname -m)" in
+		x86_64) arch="amd64" ;;
+		aarch64|arm64) arch="arm64" ;;
+		*)
+			echo "Unsupported architecture for mkcert fallback install: $(uname -m)" >&2
+			return 1
+			;;
+	esac
+
+	download_url="https://dl.filippo.io/mkcert/latest?for=linux/${arch}"
+	tmp_dir="$(mktemp -d)"
+
+	if ! curl -fsSL "$download_url" -o "$tmp_dir/mkcert"; then
+		rm -rf "$tmp_dir"
+		echo "Failed to download mkcert binary from $download_url" >&2
+		return 1
+	fi
+
+	install -m 0755 "$tmp_dir/mkcert" /usr/local/bin/mkcert
+	ln -sfn /usr/local/bin/mkcert /usr/bin/mkcert
+	rm -rf "$tmp_dir"
+}
+
+apache_ssl_install_mkcert_if_needed() {
+	if apache_ssl_resolve_mkcert_binary >/dev/null 2>&1; then
 		return 0
 	fi
 
 	log "Installing mkcert for local development certificates."
-	dnf install -y epel-release
-	dnf install -y mkcert
+	dnf install -y epel-release || true
+	dnf install -y nss-tools || true
+
+	if ! dnf install -y mkcert; then
+		log "mkcert package not available via current repositories; using direct binary fallback."
+		apache_ssl_install_mkcert_binary_fallback
+	fi
+
+	if ! apache_ssl_resolve_mkcert_binary >/dev/null 2>&1; then
+		echo "mkcert installation failed. Install mkcert manually and re-run provisioning." >&2
+		exit 1
+	fi
 }
 
 apache_ssl_backup_existing_artifacts() {
@@ -127,7 +182,7 @@ apache_ssl_should_regenerate() {
 }
 
 apache_ssl_generate_certificate() {
-	local base_domain
+	local base_domain mkcert_bin
 	local -a mkcert_domains
 	base_domain="$(normalize_domain_local "$1")"
 
@@ -137,13 +192,18 @@ apache_ssl_generate_certificate() {
 	fi
 
 	mkdir -p "$APACHE_SSL_DIR"
+	mkcert_bin="$(apache_ssl_resolve_mkcert_binary || true)"
+	if [[ -z "$mkcert_bin" ]]; then
+		echo "mkcert binary is unavailable after installation attempt." >&2
+		exit 1
+	fi
 
 	if apache_ssl_should_regenerate "$base_domain"; then
 		log "Generating mkcert certificate for $base_domain and *.$base_domain"
 		apache_ssl_backup_existing_artifacts
 		mapfile -t mkcert_domains < <(apache_ssl_mkcert_domains_array "$base_domain")
-		mkcert -install
-		mkcert -cert-file "$APACHE_SSL_CERT_FILE" -key-file "$APACHE_SSL_KEY_FILE" "${mkcert_domains[@]}"
+		"$mkcert_bin" -install
+		"$mkcert_bin" -cert-file "$APACHE_SSL_CERT_FILE" -key-file "$APACHE_SSL_KEY_FILE" "${mkcert_domains[@]}"
 		chmod 640 "$APACHE_SSL_CERT_FILE" "$APACHE_SSL_KEY_FILE"
 		chown root:apache "$APACHE_SSL_CERT_FILE" "$APACHE_SSL_KEY_FILE"
 		apache_ssl_domains_san_string "$base_domain" > "$APACHE_SSL_DOMAINS_FILE"
