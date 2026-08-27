@@ -43,6 +43,7 @@ usage() {
 Usage:
   provisioning.sh init
 	provisioning.sh validate-platform
+	provisioning.sh validate-signing [--full]
   provisioning.sh wizard
   provisioning.sh config show
   provisioning.sh config get KEY
@@ -919,6 +920,29 @@ validate_platform_command() {
 	log "Platform validation succeeded: $SP_OS_NAME"
 }
 
+validate_signing_command() {
+	local mode signing_script
+	mode="${1:-}"
+	signing_script="$SCRIPTS_DIR/gpg_signing_check.sh"
+
+	require_supported_platform
+
+	if [[ ! -f "$signing_script" ]]; then
+		fail "Missing signing check script: $signing_script"
+	fi
+
+	if [[ "$mode" == "--full" ]]; then
+		bash "$signing_script" --sign-test
+		return 0
+	fi
+
+	if [[ -n "$mode" ]]; then
+		fail "Unknown option for validate-signing: '$mode'. Supported: --full"
+	fi
+
+	bash "$signing_script"
+}
+
 plan_command() {
 	local web_summary web_ssl_enable web_ssl_base_domain web_ssl_redirect
 
@@ -1317,6 +1341,7 @@ main() {
 	case "$command" in
 		init) init_env_file ;;
 		validate-platform) validate_platform_command ;;
+		validate-signing) validate_signing_command "$@" ;;
 		wizard) wizard_command ;;
 		config) config_command "$@" ;;
 		validate) validate_command ;;

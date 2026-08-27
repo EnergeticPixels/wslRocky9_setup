@@ -47,6 +47,8 @@ bash ./provisioning.sh wizard
 
 # Optional validation and plan commands
 bash ./provisioning.sh validate-platform
+bash ./provisioning.sh validate-signing
+bash ./provisioning.sh validate-signing --full
 bash ./provisioning.sh validate
 bash ./provisioning.sh plan
 
