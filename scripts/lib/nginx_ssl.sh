@@ -13,6 +13,8 @@ NGINX_SSL_KEY_FILE="$NGINX_SSL_DIR/serverprovo-local.key"
 NGINX_SSL_DOMAINS_FILE="$NGINX_SSL_DIR/serverprovo-domains.txt"
 NGINX_SSL_SITE_FILE="/etc/nginx/conf.d/serverprovo-ssl.conf"
 NGINX_SSL_RENEW_THRESHOLD_SECONDS=$((30 * 86400))
+NGINX_SSL_WEB_ROOT="/var/www/html"
+NGINX_SSL_DEFAULT_INDEX="/usr/share/nginx/html/index.html"
 
 normalize_domain_local() {
 	local domain
@@ -361,6 +363,40 @@ EOF
 	fi
 }
 
+nginx_ssl_seed_webroot() {
+	local index_candidate
+
+	mkdir -p "$NGINX_SSL_WEB_ROOT"
+
+	# Never overwrite real content: skip if any index file already exists.
+	for index_candidate in index.php index.html index.htm; do
+		if [[ -e "$NGINX_SSL_WEB_ROOT/$index_candidate" ]]; then
+			log "Webroot $NGINX_SSL_WEB_ROOT already has $index_candidate; skipping placeholder seed."
+			return 0
+		fi
+	done
+
+	if [[ -f "$NGINX_SSL_DEFAULT_INDEX" ]]; then
+		log "Seeding $NGINX_SSL_WEB_ROOT with the standard Nginx welcome page."
+		cp -f "$NGINX_SSL_DEFAULT_INDEX" "$NGINX_SSL_WEB_ROOT/index.html"
+	else
+		log "Standard Nginx welcome page not found; writing a minimal placeholder index.html."
+		cat > "$NGINX_SSL_WEB_ROOT/index.html" <<'EOF'
+<!DOCTYPE html>
+<html>
+<head><title>Server provisioned</title></head>
+<body>
+	<h1>Nginx is serving this site.</h1>
+	<p>Replace /var/www/html/index.html with your application content.</p>
+</body>
+</html>
+EOF
+	fi
+
+	chmod 644 "$NGINX_SSL_WEB_ROOT/index.html"
+	chown root:root "$NGINX_SSL_WEB_ROOT/index.html"
+}
+
 nginx_ssl_enable_in_nginx() {
 	nginx -t
 }
@@ -371,6 +407,7 @@ nginx_ssl_setup() {
 
 	nginx_ssl_install_mkcert_if_needed
 	nginx_ssl_generate_certificate "$base_domain"
+	nginx_ssl_seed_webroot
 	nginx_ssl_write_server_block "$base_domain"
 	nginx_ssl_enable_in_nginx
 }

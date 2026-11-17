@@ -54,6 +54,12 @@ Nginx redirect behavior when SSL is enabled:
 - `WEB_SSL_FORCE_HTTPS_REDIRECT=true`: HTTP traffic redirects to HTTPS
 - `WEB_SSL_FORCE_HTTPS_REDIRECT=false`: HTTP and HTTPS are both served
 
+Nginx webroot seeding:
+- The SSL site serves from `/var/www/html`
+- If no `index.php`, `index.html`, or `index.htm` exists there, provisioning copies the standard Nginx welcome page into `/var/www/html/index.html`
+- Existing index files are never overwritten, so re-runs are safe
+- Without this seed, an empty webroot returns HTTP 403 Forbidden (directory index is disabled)
+
 ### Host OS HOSTS file requirement
 
 If the URL should work from the host computer, add `WEB_SSL_BASE_DOMAIN` to the host OS HOSTS file.
