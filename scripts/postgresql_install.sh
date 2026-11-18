@@ -132,7 +132,7 @@ postgresql_install_main() {
 		return 0
 	fi
 
-	if [[ "$DATABASE_TYPE" != "postgres" ]]; then
+	if ! database_type_includes postgres; then
 		log "DATABASE_TYPE is '$DATABASE_TYPE'; skipping PostgreSQL provisioning."
 		return 0
 	fi

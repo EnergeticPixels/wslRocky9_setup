@@ -113,8 +113,8 @@ load_database_env() {
 	DB_DEV_PASSWORD="${DB_DEV_PASSWORD:-dev_password}"
 	DB_DEV_USER_HOST="${DB_DEV_USER_HOST:-localhost}"
 
-	# Normalize DATABASE_TYPE to lowercase
-	DATABASE_TYPE="$(printf '%s' "$DATABASE_TYPE" | tr '[:upper:]' '[:lower:]')"
+	# Normalize DATABASE_TYPE to lowercase and strip whitespace (comma-list friendly)
+	DATABASE_TYPE="$(printf '%s' "$DATABASE_TYPE" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
 
 	# Normalize boolean values for dev setup
 	case "$(printf '%s' "$DB_DEV_SETUP" | tr '[:upper:]' '[:lower:]')" in
@@ -167,16 +167,92 @@ database_is_enabled() {
 	[[ "$DATABASE_TYPE" != "none" ]]
 }
 
+# Returns 0 if the given engine token is present in DATABASE_TYPE (comma list aware).
+database_type_includes() {
+	local engine
+	engine="$1"
+	[[ ",${DATABASE_TYPE}," == *",${engine},"* ]]
+}
+
+# Prints the selected relational engine (mysql or postgres), or nothing.
+database_relational_engine() {
+	if database_type_includes mysql; then
+		echo "mysql"
+	elif database_type_includes postgres; then
+		echo "postgres"
+	fi
+}
+
+# Validates a DATABASE_TYPE value (single engine or comma list).
+# Rules:
+# - allowed tokens: mysql, postgres, mongodb, none
+# - 'none' cannot be combined with other tokens
+# - mysql and postgres are mutually exclusive
+# - duplicate tokens are rejected
+# Returns 0 when valid; prints an error and returns 1 otherwise.
+validate_database_type_value() {
+	local value token
+	local -a tokens
+	local has_mysql=0 has_postgres=0 has_mongodb=0 has_none=0
+
+	value="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
+
+	if [[ -z "$value" ]]; then
+		echo "Invalid DATABASE_TYPE ''. Supported values: none, mysql, postgres, mongodb, or a comma list such as postgres,mongodb" >&2
+		return 1
+	fi
+
+	IFS=',' read -r -a tokens <<< "$value"
+	for token in "${tokens[@]}"; do
+		case "$token" in
+			mysql)
+				if [[ "$has_mysql" -eq 1 ]]; then
+					echo "Invalid DATABASE_TYPE '$value': duplicate token 'mysql'." >&2
+					return 1
+				fi
+				has_mysql=1
+				;;
+			postgres)
+				if [[ "$has_postgres" -eq 1 ]]; then
+					echo "Invalid DATABASE_TYPE '$value': duplicate token 'postgres'." >&2
+					return 1
+				fi
+				has_postgres=1
+				;;
+			mongodb)
+				if [[ "$has_mongodb" -eq 1 ]]; then
+					echo "Invalid DATABASE_TYPE '$value': duplicate token 'mongodb'." >&2
+					return 1
+				fi
+				has_mongodb=1
+				;;
+			none)
+				has_none=1
+				;;
+			*)
+				echo "Invalid DATABASE_TYPE token '$token' in '$value'. Supported tokens: none, mysql, postgres, mongodb" >&2
+				return 1
+				;;
+		esac
+	done
+
+	if [[ "$has_none" -eq 1 && "${#tokens[@]}" -gt 1 ]]; then
+		echo "Invalid DATABASE_TYPE '$value': 'none' cannot be combined with other databases." >&2
+		return 1
+	fi
+
+	if [[ "$has_mysql" -eq 1 && "$has_postgres" -eq 1 ]]; then
+		echo "Invalid DATABASE_TYPE '$value': mysql and postgres cannot run at the same time. Choose one relational engine, optionally combined with mongodb." >&2
+		return 1
+	fi
+
+	return 0
+}
+
 validate_database_type() {
-	case "$DATABASE_TYPE" in
-		mysql|postgres|mongodb|none)
-			return 0
-			;;
-		*)
-			echo "Invalid DATABASE_TYPE '$DATABASE_TYPE'. Supported values: mysql, postgres, mongodb, none" >&2
-			exit 1
-			;;
-	esac
+	if ! validate_database_type_value "$DATABASE_TYPE"; then
+		exit 1
+	fi
 }
 
 validate_mariadb_version() {

@@ -37,6 +37,11 @@ mariadb_install_main() {
 		return 0
 	fi
 
+	if ! database_type_includes mysql; then
+		log "DATABASE_TYPE is '$DATABASE_TYPE'; skipping MariaDB provisioning."
+		return 0
+	fi
+
 	# Check if MariaDB is already installed
 	if command -v mariadb &>/dev/null; then
 		log "MariaDB is already installed. Verifying installation..."

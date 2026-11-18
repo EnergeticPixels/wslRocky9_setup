@@ -31,41 +31,46 @@ if [[ "$DATABASE_TYPE" == "none" ]]; then
 	exit 0
 fi
 
-database_choice="$(printf '%s' "$DATABASE_TYPE" | tr '[:upper:]' '[:lower:]')"
+database_choice="$DATABASE_TYPE"
+ran_installer=false
 
-case "$database_choice" in
-	mysql)
-		if [[ ! -f "$MARIADB_SCRIPT" ]]; then
-			echo "Missing installer script: $MARIADB_SCRIPT" >&2
-			exit 1
-		fi
-
-		validate_mariadb_version
-		log "Running MariaDB installer script (version $MARIADB_VERSION)."
-		bash "$MARIADB_SCRIPT"
-		;;
-	postgres)
-		if [[ ! -f "$POSTGRESQL_SCRIPT" ]]; then
-			echo "Missing installer script: $POSTGRESQL_SCRIPT" >&2
-			exit 1
-		fi
-
-		validate_postgresql_version
-		log "Running PostgreSQL installer script (version $POSTGRESQL_VERSION)."
-		bash "$POSTGRESQL_SCRIPT"
-		;;
-	mongodb)
-		if [[ ! -f "$MONGODB_SCRIPT" ]]; then
-			echo "Missing installer script: $MONGODB_SCRIPT" >&2
-			exit 1
-		fi
-
-		validate_mongodb_version
-		log "Running MongoDB installer script (version $MONGODB_VERSION)."
-		bash "$MONGODB_SCRIPT"
-		;;
-	*)
-		echo "Unexpected DATABASE_TYPE '$database_choice'" >&2
+if database_type_includes mysql; then
+	if [[ ! -f "$MARIADB_SCRIPT" ]]; then
+		echo "Missing installer script: $MARIADB_SCRIPT" >&2
 		exit 1
-		;;
-esac
+	fi
+
+	validate_mariadb_version
+	log "Running MariaDB installer script (version $MARIADB_VERSION)."
+	bash "$MARIADB_SCRIPT"
+	ran_installer=true
+fi
+
+if database_type_includes postgres; then
+	if [[ ! -f "$POSTGRESQL_SCRIPT" ]]; then
+		echo "Missing installer script: $POSTGRESQL_SCRIPT" >&2
+		exit 1
+	fi
+
+	validate_postgresql_version
+	log "Running PostgreSQL installer script (version $POSTGRESQL_VERSION)."
+	bash "$POSTGRESQL_SCRIPT"
+	ran_installer=true
+fi
+
+if database_type_includes mongodb; then
+	if [[ ! -f "$MONGODB_SCRIPT" ]]; then
+		echo "Missing installer script: $MONGODB_SCRIPT" >&2
+		exit 1
+	fi
+
+	validate_mongodb_version
+	log "Running MongoDB installer script (version $MONGODB_VERSION)."
+	bash "$MONGODB_SCRIPT"
+	ran_installer=true
+fi
+
+if [[ "$ran_installer" != "true" ]]; then
+	echo "Unexpected DATABASE_TYPE '$database_choice'" >&2
+	exit 1
+fi

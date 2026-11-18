@@ -1,12 +1,19 @@
 # Databases
 
-Database provisioning is optional and mutually exclusive.
+Database provisioning is optional. The relational engines (MariaDB and PostgreSQL) are mutually exclusive, but MongoDB can run alongside either one.
 
 Set in `.env`:
 - `DATABASE_TYPE=none` (default) for no database
 - `DATABASE_TYPE=mysql` for MariaDB (MySQL-compatible)
 - `DATABASE_TYPE=postgres` for PostgreSQL
 - `DATABASE_TYPE=mongodb` for MongoDB Community Edition
+- `DATABASE_TYPE=mysql,mongodb` for MariaDB plus MongoDB
+- `DATABASE_TYPE=postgres,mongodb` for PostgreSQL plus MongoDB
+
+Combination rules:
+- `mysql` and `postgres` cannot be combined
+- `none` cannot be combined with any engine
+- Order of comma-list tokens does not matter
 
 Run database setup only:
 
@@ -21,6 +28,8 @@ These apply when `DB_DEV_SETUP=true`:
 - `DB_DEV_USER=dev_user`
 - `DB_DEV_PASSWORD=dev_password`
 - `DB_DEV_USER_HOST=localhost` (used by SQL flows)
+
+When MongoDB runs alongside a relational engine, `DB_DEV_SETUP=true` creates the development database/user in the relational engine only. MongoDB gets the dev database/user only when it is the sole selected engine.
 
 Security note: these values are plaintext in `.env` and intended for local development only.
 

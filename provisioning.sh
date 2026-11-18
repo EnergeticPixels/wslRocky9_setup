@@ -498,6 +498,34 @@ read_choice() {
 	done
 }
 
+read_database_type() {
+	local prompt default input normalized
+	prompt="$1"
+	default="$2"
+	default="$(printf '%s' "$default" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
+
+	if ! command -v validate_database_type_value >/dev/null 2>&1; then
+		# shellcheck source=/dev/null
+		source "$SCRIPTS_DIR/lib/database.sh"
+	fi
+
+	if ! validate_database_type_value "$default" 2>/dev/null; then
+		echo "Invalid default '$default' for prompt '$prompt'. Falling back to 'none'." >&2
+		default="none"
+	fi
+
+	while true; do
+		read -r -p "$prompt [$default]: " input
+		input="${input:-$default}"
+		normalized="$(printf '%s' "$input" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
+
+		if validate_database_type_value "$normalized"; then
+			printf '%s' "$normalized"
+			return 0
+		fi
+	done
+}
+
 ensure_interactive_terminal() {
 	if [[ ! -t 0 ]]; then
 		fail "Wizard requires an interactive terminal."
@@ -677,22 +705,20 @@ wizard() {
 		set_env_key "PYTHON_DEV_MODE" "$value"
 	fi
 
-	selected_database_type="$(read_choice 'DATABASE_TYPE (none/mysql/postgres/mongodb)' "$database_type_default" 'none,mysql,postgres,mongodb')"
+	selected_database_type="$(read_database_type 'DATABASE_TYPE (none/mysql/postgres/mongodb; combine with commas, e.g. postgres,mongodb — mysql and postgres cannot be combined)' "$database_type_default")"
 	set_env_key "DATABASE_TYPE" "$selected_database_type"
-	case "$selected_database_type" in
-		mysql)
-			value="$(read_with_default 'MARIADB_VERSION' "$mariadb_version_default")"
-			set_env_key "MARIADB_VERSION" "$value"
-			;;
-		postgres)
-			value="$(read_with_default 'POSTGRESQL_VERSION' "$postgresql_version_default")"
-			set_env_key "POSTGRESQL_VERSION" "$value"
-			;;
-		mongodb)
-			value="$(read_with_default 'MONGODB_VERSION' "$mongodb_version_default")"
-			set_env_key "MONGODB_VERSION" "$value"
-			;;
-	esac
+	if [[ ",$selected_database_type," == *",mysql,"* ]]; then
+		value="$(read_with_default 'MARIADB_VERSION' "$mariadb_version_default")"
+		set_env_key "MARIADB_VERSION" "$value"
+	fi
+	if [[ ",$selected_database_type," == *",postgres,"* ]]; then
+		value="$(read_with_default 'POSTGRESQL_VERSION' "$postgresql_version_default")"
+		set_env_key "POSTGRESQL_VERSION" "$value"
+	fi
+	if [[ ",$selected_database_type," == *",mongodb,"* ]]; then
+		value="$(read_with_default 'MONGODB_VERSION' "$mongodb_version_default")"
+		set_env_key "MONGODB_VERSION" "$value"
+	fi
 
 	if [[ "$selected_database_type" != "none" ]]; then
 		value="$(read_bool 'DB_DEV_SETUP (true/false)' "$db_setup_default")"
@@ -877,11 +903,15 @@ validate_with_libs() {
 	source "$SCRIPTS_DIR/lib/database.sh"
 	load_database_env
 	validate_database_type
-	case "$DATABASE_TYPE" in
-		mysql) validate_mariadb_version ;;
-		postgres) validate_postgresql_version ;;
-		mongodb) validate_mongodb_version ;;
-	esac
+	if database_type_includes mysql; then
+		validate_mariadb_version
+	fi
+	if database_type_includes postgres; then
+		validate_postgresql_version
+	fi
+	if database_type_includes mongodb; then
+		validate_mongodb_version
+	fi
 
 	# shellcheck source=/dev/null
 	source "$SCRIPTS_DIR/lib/redis.sh"

@@ -130,7 +130,7 @@ Extension planning:
 
 Database driver extension selection:
 - `PHP_DB_DRIVER_MODE=auto|mysql|postgres|none`
-- In `auto` mode, selection follows `DATABASE_TYPE`
+- In `auto` mode, selection follows the relational engine in `DATABASE_TYPE` (`mysql` or `postgres`, including comma lists like `postgres,mongodb`; MongoDB alone resolves to `none`)
 
 PHP-FPM integration controls:
 - `PHP_FPM_SERVICE_NAME=php-fpm` (default)

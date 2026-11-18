@@ -69,7 +69,7 @@ Baseline map:
 
 ## Databases
 
-- `DATABASE_TYPE=none|mysql|postgres|mongodb`
+- `DATABASE_TYPE=none|mysql|postgres|mongodb` or a comma list combining `mongodb` with one relational engine (e.g. `postgres,mongodb`); `mysql` and `postgres` cannot be combined
 - `MARIADB_VERSION` (10.5-10.11, 11.0-11.6)
 - `POSTGRESQL_VERSION=14|15|16|17`
 - `MONGODB_VERSION=6.0|7.0|8.0`

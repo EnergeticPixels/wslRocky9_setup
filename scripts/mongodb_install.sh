@@ -148,7 +148,7 @@ mongodb_install_main() {
 		return 0
 	fi
 
-	if [[ "$DATABASE_TYPE" != "mongodb" ]]; then
+	if ! database_type_includes mongodb; then
 		log "DATABASE_TYPE is '$DATABASE_TYPE'; skipping MongoDB provisioning."
 		return 0
 	fi
@@ -167,7 +167,11 @@ mongodb_install_main() {
 	wait_for_mongodb_ready
 
 	if db_dev_setup_is_enabled; then
-		setup_mongodb_dev_environment
+		if [[ -n "$(database_relational_engine)" ]]; then
+			log "DB_DEV_SETUP applies to the relational engine ($(database_relational_engine)); skipping MongoDB dev database setup."
+		else
+			setup_mongodb_dev_environment
+		fi
 	else
 		log "Development setup is disabled (DB_DEV_SETUP=false)."
 		log "To enable, set DB_DEV_SETUP=true in .env and re-run this script."

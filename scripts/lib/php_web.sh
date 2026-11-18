@@ -127,7 +127,7 @@ load_web_stack_env() {
 			;;
 	esac
 
-	DATABASE_TYPE="$(printf '%s' "$DATABASE_TYPE" | tr '[:upper:]' '[:lower:]')"
+	DATABASE_TYPE="$(printf '%s' "$DATABASE_TYPE" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
 	PHP_DB_DRIVER_MODE="$(printf '%s' "$PHP_DB_DRIVER_MODE" | tr '[:upper:]' '[:lower:]')"
 	WEB_SSL_BASE_DOMAIN="$(printf '%s' "$WEB_SSL_BASE_DOMAIN" | tr '[:upper:]' '[:lower:]')"
 
@@ -243,17 +243,14 @@ get_effective_php_db_driver_mode() {
 		return 0
 	fi
 
-	case "$DATABASE_TYPE" in
-		mysql)
-			echo "mysql"
-			;;
-		postgres)
-			echo "postgres"
-			;;
-		*)
-			echo "none"
-			;;
-	esac
+	# DATABASE_TYPE may be a comma list (e.g. postgres,mongodb); match tokens.
+	if [[ ",${DATABASE_TYPE}," == *",mysql,"* ]]; then
+		echo "mysql"
+	elif [[ ",${DATABASE_TYPE}," == *",postgres,"* ]]; then
+		echo "postgres"
+	else
+		echo "none"
+	fi
 }
 
 trim_whitespace() {
